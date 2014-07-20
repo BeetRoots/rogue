@@ -1,0 +1,168 @@
+<script type='text/javascript' src='../jquery.js'></script>
+<link rel='stylesheet' href='style.css' type='text/css'/>
+<canvas id='canvas' height=600 width=1000>Your browser doesnt support canvas</canvas>
+<div id='log' style=' position: absolute; right: 0; top: 0; width:200px; height: 400px; color: #FFF; overflow-y: scroll;'>You enter a cave. You hear faint moaning</div>
+
+<script type='text/javascript'>
+
+	var inventory = [];
+	var blockSize = 15;
+	var player = {x:30,y:30}
+	var ctx = $("#canvas")[0].getContext("2d");
+
+	//shading
+	var colors = ["#FFF","#EEE","#DDD","#FFF","#BBB","#AAA","#999","#888","#777","#666","#555","#444","#333","#222","#111","#000"];
+
+	//map
+	var mapArray = [[22,13],[
+		1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+		1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,1,
+		1,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,1,
+		1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,1,
+		1,1,1,1,4,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,1,
+		1,5,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+		1,2,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+		1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+		1,0,0,0,0,0,0,0,0,0,0,1,4,1,1,1,1,1,1,1,4,1,
+		1,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1,
+		1,0,0,0,0,0,0,0,0,0,0,1,0,3,0,0,0,0,0,0,0,1,
+		1,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1,
+		1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+	]
+
+	//align all text to the center
+	ctx.textAlign="center";
+
+	function draw(){
+		//clear map
+		ctx.clearRect(0,0,mapArray[0][0]*blockSize,mapArray[0][1]*blockSize)
+
+		//draw map
+		for(x=blockSize,y=blockSize,j=0;j<(mapArray[0][0]*mapArray[0][1]);x+=blockSize,j++){
+			
+			//set everything not lit to black
+			ctx.fillStyle="#000";
+			
+			//get distance from player and objects
+			distX = player.x-x;
+			distY = player.y-y;
+			
+			if(distX<0){
+				distX*=-1;
+			}
+			if(distY<0){
+				distY*=-1;
+			}
+
+			distTotal = Math.floor(Math.sqrt((distX*distX)+(distY*distY))/8)
+
+			if(distTotal<15){
+				ctx.fillStyle=colors[distTotal];
+			}else{
+				ctx.fillStyle=colors[15];
+			}
+
+			//get what we're looking at
+			object = mapArray[1][j];
+
+			//draw objects
+			if(object==1){
+				ctx.fillRect(x-blockSize/2,y-2.5-blockSize/2,blockSize,blockSize);
+				ctx.fillStyle="#000033";
+				ctx.fillText("#",x,y);
+			}else if(object==2){
+				ctx.fillText("+",x,y);
+			}else if(object==3){
+				ctx.fillText("s",x,y);
+			}else if(object==4){
+				ctx.fillText("=",x,y);
+			}else if(object==5){
+				ctx.fillText("!",x,y);
+			}else{
+				ctx.fillText(".",x,y);
+			}
+
+			if(x==mapArray[0][0]*blockSize){
+				x = 0;
+				y+=blockSize;
+			}
+
+		}
+		
+		//draw player
+		ctx.fillStyle="#ff0077";
+		ctx.fillText("@",player.x,player.y);
+
+	}
+
+	function hitTest(playerX,playerY){
+		for(x=blockSize,y=blockSize,j=0;j<(mapArray[0][0]*mapArray[0][1]);x+=blockSize,j++){
+			object = mapArray[1][j];
+			if(playerX==x && playerY==y){
+				if(object==1){
+					return 1;
+				}else if(object==2){
+					log("You pass through a door");
+				}else if(object==3){
+					log("You picked up a sword!");
+					mapArray[1][j]=0;
+				}else if(object==4){
+					found = false
+					for(i=0;i<inventory.length;i++){
+						if(inventory[i]==1){
+							mapArray[1][j]=2;
+							log("You unlocked the door!");
+							found = true
+						}
+					}
+					if(found==false){
+						log("Door is locked! look for the key!");
+					}
+					
+					return 1;
+				}else if(object==5){
+					log("You picked up a key!");
+					mapArray[1][j]=0;
+					inventory.push(1)
+				}
+			}
+			if(x==mapArray[0][0]*blockSize){
+				x = 0;
+				y+=blockSize;
+			}
+		}
+		return 0;
+	}
+	
+	$(document).keydown(function(e){
+		key = e.which;
+		if(key==68 || key==39){
+			if(!hitTest(player.x+blockSize,player.y)){
+				player.x+=blockSize;
+			}
+		}
+		if(key==65 || key==37){
+			if(!hitTest(player.x-blockSize,player.y)){
+				player.x-=blockSize;
+			}
+		}
+		if(key==83 || key==40){
+			if(!hitTest(player.x,player.y+blockSize)){
+				player.y+=blockSize;
+			}
+		}
+		if(key==87 || key==38){
+			if(!hitTest(player.x,player.y-blockSize)){
+				player.y-=blockSize;
+			}
+		}
+		draw();
+	})
+
+	function log(str){
+		$("#log").prepend(str+"<br>")
+	}
+
+	draw();
+
+</script>
